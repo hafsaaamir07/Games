@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style>
+		body{
+			background-color: black;
+			color: white;
+			font-family: monospace;
+			text-align: center;
+		}
+		.hidden{
+			display: none;
+		}
+		#tokens_easy{
+			width: 400px;
+			height: 300px;
+			margin: auto;
+		}
+       #tokens_med{
+      		width: 500px;
+      		height: 600px;
+      		margin: auto;
+    	}
+    	#tokens_hard{
+      		width: 600px;
+        	height: 700px;
+         	margin: auto;
+    	}
+		.tokens img {
+			width: 100px;
+			height: 100px;
+		}
+		#play_again{
+			margin-top: 20px;
+		}
+		#txt_time{
+			font-size: 15px;
+		}
+		#txt_bestTime{
+			font-size: 15px;
+			margin-top: 5px;
+
+		}
+		
+	</style>
+</head>
+<body>
+	<h1>Memory Matching Madness</h1>
+
+	<!-- Start Screen -->
+	<div id = "start_screen">
+		<p id = "txt">Play a fast-paced game of "memory" and try and beat your best time!</p>
+		<button id = "start">Easy</button>
+    	<button id = "med">Medium</button>
+    	<button id = "hard">Hard</button>
+    <br>
+   
+	</div>
+
+
+	<!-- Game Screen -->
+	<div id = "game_screen" class="hidden">
+		<div id = "timer"> Time: 0</div>
+		<div class = "tokens"></div>
+	</div>
+
+
+	<!-- Game Over Screen -->
+	<div id ="game_over" class="hidden">
+		<div id = "txt_time"></div>
+		<div id = "txt_bestTime1"></div>
+		<div id = "txt_bestTime2"></div>
+		<div id = "txt_bestTime3"></div>
+		<button id = "play_again">Play Again</button>
+		
+	</div>
+
+  	<audio id = "correct">
+    	<source src="images/correct.wav" type="audio/wav">
+  	</audio>
+
+  	<audio id = "incorrect">
+    	<source src="images/wrong.wav" type="audio/wav">
+  	</audio>
+
+	<script>
+		let start_screen = document.querySelector("#start_screen");
+		let game_screen = document.querySelector("#game_screen");
+		let game_over = document.querySelector("#game_over");
+		let start = document.querySelector("#start");
+    	let lvl_med = document.querySelector("#med");
+    	let lvl_hard = document.querySelector("#hard");
+		var tokens = document.querySelector(".tokens");
+		let clock = document.querySelector("#timer");
+    	let corr = document.querySelector("#correct");
+    	let incorr = document.querySelector("#incorrect");
+    	let your_time = document.querySelector("#txt_time");
+    	let best_time1 = document.querySelector("#txt_bestTime1");
+    	let best_time2 = document.querySelector("#txt_bestTime2");
+    	let best_time3 = document.querySelector("#txt_bestTime3");
+
+    	// array of all pokeman graphics for game
+		var assets = ['snorlax.png', 'electrabuzz.png', 'chansey.png', 'oddish.png',
+              'pikachu.png', 'paras.png', 'arcanine.png', 'ponita.png',
+              'venonat.png', 'eggsecute.png', 'machop.png', 'pidgey.png',
+              'psyduck.png', 'tauros.png', 'vulpix.png', 'gloom.png',
+              'krabby.png', 'butterfree.png', 'bulbasaur.png', 'clefairy.png',
+              'koffing.png', 'goldeen.png', 'magikarp.png', 'beedrill.png',
+              'lapras.png', 'meowth.png', 'ekans.png', 'jigglypuff.png',
+              'horsea.png', 'polywog.png', 'sandshrew.png', 'rattata.png',
+              'gengar.png', 'eevee.png', 'bellsprout.png', 'squirtle.png',
+              'seel.png', 'caterpie.png']
+
+
+        //keep track of which elements (pokeball pictures) were clicked
+        let token1 = false;  // if we are clicking the pokeall for the first time
+        let token2 = false;  // if we are clicking for the 2nd time
+        let match = 0;
+        var time = 0;
+        var stop;
+        var curr_time1;
+        //let best = []; // store best scores
+        
+        let best = [];
+        var user_name;
+     
+    	// easy mode
+		start.addEventListener ("click", function(){
+			transferScreen("tokens_easy");
+      		startGame(6,'ez');
+    	});
+
+    	//med mode
+    	med.addEventListener("click",function(){
+    		transferScreen("tokens_med");
+      		startGame(10,'med');
+
+    	});
+
+    	//hard mode
+    	hard.addEventListener("click",function(){
+    		transferScreen("tokens_hard");
+      		startGame(15,'hard');
+
+    	});
+
+
+
+
+
+  //**************************************** FUNCTIONS FOR GAME ******************************************
+    	function transferScreen(s){
+    		user_name = prompt ("Please enter your name for the score board");
+    		
+    		tokens.id = s;
+    	
+      		//when the user clicks we need to make start screen invisible so we can show game screen
+      		start_screen.classList.add("hidden");
+      		game_screen.classList.remove("hidden");
+    	}
+
+
+        //function for the game to be played
+    	function startGame(num,mode){
+
+    		if (window.localStorage.getItem(mode+": best")){
+    			best = JSON.parse(localStorage.getItem(mode+": best"));
+    		}
+
+			//start timer once clicked start
+			stop = setInterval(seconds,1000);
+
+            //pick 6 random pokemans + //randomize the pokemon array (picked_pokemon)
+            let picked_pokemon = [];
+            for (let i = 0; i < num; i++){
+            	let random_pokemon = parseInt(Math.random()*assets.length);
+              	picked_pokemon.push(assets[random_pokemon]);
+              	picked_pokemon.push(assets[random_pokemon]);
+              	assets.splice(random_pokemon,1)
+            }
+
+            //create 12 poke balls
+            while(picked_pokemon.length > 0){
+            	let img = document.createElement("img");
+              	img.src = "images/pokeball.png";
+
+              	let index =parseInt(Math.random()*picked_pokemon.length);
+              	img.dataset.secret = picked_pokemon[index];
+              	picked_pokemon.splice(index,1);
+              	//console.log(picked_pokemon);
+              	tokens.appendChild(img);
+
+
+
+              	//show our secret image when we click the pokeball
+              	img.addEventListener("click",function(event){
+
+              		//if this is the first time the pokeball is being clicked then show image as it is 
+              		if (token1 == false){ // if nothing has been clicked yet
+                    
+              		// this becomes token1
+              		token1 = event.currentTarget;
+              		//console.log("token1: "+token1);
+
+              		//reveal our secret image
+              		event.currentTarget.src = "images/"+event.currentTarget.dataset.secret
+
+              		}
+
+              		//if this is the second pokeball image being clicked then we need to evaluate
+              		else if (token2 == false && token1 !== event.currentTarget){
+
+                    	token2 = event.currentTarget;
+                    	//console.log("token2: "+token2);
+
+              			
+              			//reveal our secret image
+              			event.currentTarget.src = "images/"+event.currentTarget.dataset.secret
+
+              			//checking to see if both images that were clciked are the same
+              			// secret is the dataset that is holding the random pokemon pictures
+              			if (token1.dataset.secret == token2.dataset.secret){
+              				token1.style.pointerEvents ="none";
+              				token2.style.pointerEvents  = "none";
+              				token1 = false;
+              				token2 = false;
+              				match++;
+                       		corr.play(); // playing sound if match is correct
+
+                      		//seeing if we got all 6 pokeballs
+              				if (match === num){
+                        		checkTime(time,user_name,mode);
+                        		time = 0;
+                        
+                        		//stoping the time;
+                        		stop_timer();
+
+                        		setTimeout(end,500);
+                        		play_again.addEventListener("click",function(){
+    								game_over.classList.add("hidden");
+    								start_screen.classList.remove("hidden");
+    								best_time1.innerHTML ="";
+      								best_time2.innerHTML ="";
+      								best_time3.innerHTML ="";
+    								while(tokens.firstChild){
+      									tokens.removeChild(tokens.firstChild);
+    								}
+  								})
+              				}
+              			}
+              			// if not a match we have to hide those pokeballs
+              			else{
+              				// in half a second set-timeout 
+              				setTimeout(reset,500);
+              				incorr.play();
+
+              			}
+              		}
+              	});
+           	}
+		};
+
+
+
+		// function to check the time and get the best three                                         
+		function checkTime(curr,nm, mode){ 
+
+			let objects = {};
+			objects.time = curr;
+			objects.name = nm; 
+			// {tmie: 5, name: a}
+			for (let i = 0; i < best.length; i ++){
+				if (best[i].time == curr && best[i].name == nm){
+					best.pop(best[i]);
+					
+				}
+			}                                                             
+                                                                                                     
+    		best.push(objects);
+
+    		best.sort(function(a,b) {
+        	return a.time - b.time;
+      		});
+      		window.localStorage.setItem(mode+": best", JSON.stringify(best));
+
+    		//best = JSON.parse(localStorage.getItem(mode+": best"));
+    		console.log(best);
+
+    		txt_time.innerHTML = `Your time: ${curr}`;
+    		
+    		
+    		best_time1.innerHTML = `#1 Best time: ${best[0].time} - ${best[0].name}`;
+    		
+    		if (best.length > 1){
+    			best_time2.innerHTML = `#2 Best time: ${best[1].time} - ${best[1].name}`;
+    		}
+    		if (best.length > 2){
+    			best_time3.innerHTML = `#3 Best time: ${best[2].time} - ${best[2].name}`;
+
+    		}
+    		
+    	} 
+    	
+
+  		//function to reset the pokemons
+  		function reset(){
+			//hide both tokens
+            token1.src = "images/pokeball.png"
+            token2.src = "images/pokeball.png"
+
+            //flip tokens back to false to reset the next match
+            token1 = false;
+            token2 = false;
+		}
+
+		//function for the game has ended
+		function end(){
+			game_screen.classList.add("hidden");
+      		game_over.classList.remove("hidden");
+      		match = 0;
+      		clock.innerHTML = `Time: 0`; 
+      		best=[]; 
+		}
+
+		//function for the timer
+		function seconds (){
+			time++;
+			clock.innerHTML = `Time: ${time}`;
+			//console.log(time);
+		}
+
+		function stop_timer(){
+			clearInterval(stop);
+		}
+		
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
